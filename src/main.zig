@@ -221,7 +221,7 @@ pub fn g1Sub(a: G1, b: G1) G1 {
 pub fn g1Rand() !G1 {
     const len: usize = 32;
     var buf: [len]u8 = undefined;
-    try std.os.getrandom(&buf);
+    try std.posix.getrandom(&buf);
 
     var out: G1 = undefined;
     blst.blst_hash_to_g1(&out, &buf, len, null, 0, null, 0);
@@ -241,7 +241,7 @@ pub fn g1Mul(g: G1, fr: Fr) G1 {
 pub fn g2Rand() !G2 {
     const len: usize = 32;
     var buf: [len]u8 = undefined;
-    try std.os.getrandom(&buf);
+    try std.posix.getrandom(&buf);
 
     var out: G2 = undefined;
     blst.blst_hash_to_g2(&out, &buf, len, null, 0, null, 0);
@@ -323,7 +323,7 @@ fn g1LinearCombination(allocator: Allocator, p: []G1, coefficients: []Fr) !G1 {
         blst.blst_scalar_from_fr(&scalars[i], &coefficients[i]);
     }
 
-    var scalars_arg = [_:null]?*const u8{@ptrCast(@alignCast(std.mem.asBytes(scalars)))};
+    var scalars_arg = [_:null]?*const u8{@ptrCast(@alignCast(scalars))};
     var points_arg = [_:null]?*const P1Affine{@ptrCast(p1_affines)};
     blst.blst_p1s_mult_pippenger(
         &out,
@@ -374,7 +374,7 @@ pub fn bytesFromBlsField(fr: Fr) [32]u8 {
 /// Initialize and return a random field element. Useful for tests.
 pub fn frRand() !Fr {
     var buf: [32]u8 = undefined;
-    try std.os.getrandom(&buf);
+    try std.posix.getrandom(&buf);
 
     return hashToBlsField(buf);
 }
@@ -1247,7 +1247,7 @@ test "compute and verify: fails incorrect proof" {
     const z = try frRand();
 
     const z_raw = bytesFromBlsField(z);
-    const proof_raw, const y_raw = try computeKzgProofLagrange(allocator, &blob, z_raw, cfg);
+    var proof_raw, const y_raw = try computeKzgProofLagrange(allocator, &blob, z_raw, cfg);
     const y = try bytesToBlsField(y_raw);
     var proof = try g1FromBytes(proof_raw);
 
@@ -1350,8 +1350,8 @@ test "verifyKzgProofBlob: invalid blob" {
     const len: usize = BYTES_PER_G1_COMPRESSED;
     var commitment_raw: [len]u8 = undefined;
     var proof_raw: [len]u8 = undefined;
-    try std.os.getrandom(&commitment_raw);
-    try std.os.getrandom(&proof_raw);
+    try std.posix.getrandom(&commitment_raw);
+    try std.posix.getrandom(&proof_raw);
 
     try std.testing.expectError(FieldError.InvalidUncompressedG1, verifyKzgProofBlob(allocator, &blob, proof_raw, commitment_raw, cfg));
 }
